@@ -19,21 +19,11 @@
     "url": "https://github.com/AshenOne/Factorio/issues"
   },
   "homepage": "https://github.com/AshenOne/Factorio#readme",
-  "devDependencies": {
-    "chalk": "^1.1.3",
-    "co": "^4.6.0",
-    "co-prompt": "^1.0.0",
+  "devDependencies": {},
+  "dependencies": {
+    "rimraf": "^2.5.4",
     "commander": "^2.9.0",
     "copy-dir": "^0.3.0",
-    "download-git-repo": "^0.2.1",
-    "exec-npm-install": "^1.0.4",
-    "inquirer": "^1.2.1"
-  },
-  "dependencies": {
-    "babel-core": "^6.17.0",
-    "babel-preset-stage-1": "^6.16.0",
-    "babel-preset-stage-3": "^6.17.0",
-    "rimraf": "^2.5.4",
-    "rm-rf": "^2.0.1"
+    "download-git-repo": "^0.2.1"
   }
 }
