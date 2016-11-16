@@ -2,4 +2,14 @@
 
 'use strict'
 
-require('../lib/core')
+// 校验版本
+// require('../lib/check-version')('simple')
+
+// 下载校验文件
+// require('../lib/download-verify-file')('simple')
+
+// 下载包
+// require('../lib/download-package')('simple')
+
+// 解压包
+require('../lib/unzip')('simple')
