@@ -12,4 +12,4 @@
 // require('../lib/download-package')('simple')
 
 // 解压包
-require('../lib/unzip')('simple')
+// require('../lib/unzip')('simple')
