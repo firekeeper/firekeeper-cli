@@ -5,6 +5,15 @@
 // 校验版本
 // require('../lib/check-version')('simple')
 
+// 创建 firekeeper 目录
+// require('../lib/create-firekeeper')('simple')
+
+// 创建 simple 目录
+// require('../lib/create-simple')('simple')
+
+// 创建 project 目录
+// require('../lib/create-project')('./dist')
+
 // 下载校验文件
 // require('../lib/download-verify-file')('simple')
 
