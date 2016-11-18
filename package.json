@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/AshenOne/Factorio.git"
+    "url": "git+https://github.com/firekeeper/firekeeper-cli.git"
   },
   "bin": {
     "firekeeper": "bin/firekeeper"
@@ -16,9 +16,9 @@
   "author": "刘家尧",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/AshenOne/Factorio/issues"
+    "url": "https://github.com/firekeeper/firekeeper-cli/issues"
   },
-  "homepage": "https://github.com/AshenOne/Factorio#readme",
+  "homepage": "https://github.com/firekeeper/firekeeper-cli#readme",
   "devDependencies": {},
   "dependencies": {
     "chalk": "^1.1.3",
