@@ -1,0 +1,283 @@
+const fs = require('fs')
+
+const program = require('commander')
+const chalk = require('chalk')
+const request = require('request')
+const requestProgress = require('request-progress')
+const logUpdate = require('log-update')
+const logSymbols = require('log-symbols')
+const StreamZip = require('node-stream-zip')
+
+const exists = require('../lib/exists')
+const mkdir = require('../lib/mkdir')
+
+const settings = require('../lib/settings')
+
+let i = 0
+let firekeeper = null
+const frames = ['-', '\\', '|', '/']
+
+program
+    .usage('<mode> <project-name>')
+    .parse(process.argv)
+
+program.on('--help', function() {
+    console.log('  Example:\n')
+    console.log('    firekeeper init simple project')
+    console.log()
+})
+
+// 验证用户输入，如果在 init 后少于两个参数，则不合法
+if (program.args.length < 2) {
+    program.help()
+}
+
+// 保存用户输入参数
+// init 后第一个参数为模式
+// 第二个参数为项目名称
+// 现在只有 simple 模式，所以默认为 simple
+let mode = 'simple'
+const projectName = program.args[1] || 'my-project'
+
+// 输出空行保证命令行格式工整
+console.log()
+
+// 检测项目目录
+exists(projectName, (result) => {
+    // 项目已存在，输出信息
+    if (result) {
+        console.log(logSymbols['error'], chalk['red']('项目已存在，重新创建项目或手动清空目录'))
+    }
+    // 项目不存在
+    else {
+        logUpdate(`${logSymbols['info']} 开始创建项目...`)
+        mkdir(projectName, (err) => {
+            // 项目创建失败
+            if (err) {
+                console.log(logSymbols.error, chalk['red']('项目创建失败，详细信息：\n'))
+                console.log(err)
+            }
+            else {
+                logUpdate(`${logSymbols.success} 项目目录创建成功`)
+                logUpdate.done()
+                // 验证本地校验文件
+                console.log()
+                logUpdate(`${logSymbols.info} 检查更新...`)
+                exists(settings[mode].verifyFile.local, (result) => {
+                    // 校验文件存在，验证线上版本
+                    if (result) {
+                        const local = require(settings[mode].verifyFile.local)
+                        request(`${settings.source[0]}${settings[mode].verifyFile.remote}?v=${Math.random()}`, (err, response, body) => {
+                            try {
+                                body = JSON.parse(body)
+                            }
+                            catch(err)  {
+                                logUpdate(`${logSymbols.error} 线上文件有误，请联系：x@kassading.com`)
+                                logUpdate.done()
+                                return
+                            }
+                            // 没有更新，检验模板文件是否存在
+                            if (local.version === body.version) {
+                                logUpdate(`${logSymbols.success} 模板文件没有更新`)
+                                logUpdate.done()
+                                existsTemplate()
+                            }
+                            // 有更新，下载新版校验文件
+                            else {
+                                logUpdate(`  本地版本：${local.version}\n  线上版本：${body.version}\n${logSymbols.info} 需要更新`)
+                                logUpdate.done()
+                                downloadVerifyFile()
+                            }
+                        })
+                    }
+                    // 校验文件不存在，检查 simple 目录
+                    else {
+                        logUpdate(`${logSymbols.info} 校验文件不存在`)
+                        logUpdate.done()
+                        exists(settings['simple'].package.path, (result) => {
+                            // simple 目录存在，下载校验文件
+                            if (result) {
+                                downloadVerifyFile()
+                            }
+                            // simple 目录不存在，检查 .firekeeper 目录
+                            else {
+                                exists(settings.package.path, (result) => {
+                                    // .firekeeper 目录已存在，创建 simple 目录
+                                    if (result) {
+                                        createSimpleDir()
+                                    }
+                                    // .firekeeper 目录不存在，创建 .firekeeper 目录
+                                    else {
+                                        mkdir(settings.package.path, (err) => {
+                                            // .firekeeper 目录创建失败，输出报错信息，终止程序
+                                            if (err) {
+                                                console.log(err)
+                                            }
+                                            // .firekeeper 目录创建成功，继续创建 simple 目录
+                                            else {
+                                                createSimpleDir()
+                                            }
+                                        })
+                                    }
+                                })
+                            }
+                        })
+                    }
+                })
+            }
+        })
+    }
+})
+
+function createSimpleDir() {
+    mkdir(settings[mode].package.path, (err) => {
+        // simple 目录创建失败，输出报错信息，终止程序
+        if (err) {
+            console.log(err)
+        }
+        // simple 目录创建成功，下载校验文件
+        else {
+            downloadVerifyFile()
+        }
+    })
+}
+
+function downloadVerifyFile() {
+    console.log()
+    console.log(`${logSymbols.info} 开始下载校验文件...`)
+
+    let speed = 0, percentage = 0
+
+    requestProgress(request(`${settings.source[0]}/${settings[mode].verifyFile.remote}?v=${Math.random()}`), { throttle: 100 })
+        .on('progress', (state) => {
+            const frame = frames[i++ % frames.length]
+
+            speed = (state.speed/1024/1024).toFixed(2)
+            percentage = (state.percentage*100).toFixed(2)
+
+            const progressBar = (function() {
+                const width = 20
+                const completed = Math.ceil(width * state.percentage)
+                const loading = width - completed
+                return new Array(completed + 1).join('=') + new Array(loading + 1).join('-')
+            })()
+
+            logUpdate(`${chalk['cyan'](frame)} [${progressBar}] ${speed}MB/s ${percentage}%`)
+        })
+        .on('error', (err) => {
+            logUpdate.done()
+            console.log(logSymbols.error, '校验文件下载失败：')
+            console.log(err)
+        })
+        .on('end', () => {
+            i = 0
+            logUpdate(`${logSymbols['success']} [====================] ${speed}MB/s 100%`)
+            logUpdate.done()
+            // 下载完成，检验模板文件
+            existsTemplate()
+        })
+        .pipe(fs.createWriteStream(settings[mode].verifyFile.local))
+}
+
+// 检验模板文件是否存在
+function existsTemplate() {
+    firekeeper = require(settings[mode].verifyFile.local)
+
+    const template = `${settings[mode].package.path}/${firekeeper.least.filename}`
+
+    exists(template, (result) => {
+        // 模板文件存在，解压
+        if (result) {
+            unzipTemplate(template)
+        }
+        // 模板文件不存在，下载
+        else {
+            downloadTemplate(`${settings.source[0]}${firekeeper.least.url}`, template)
+        }
+    })
+}
+
+// 下载模板文件
+function downloadTemplate(url, release) {
+    console.log()
+    console.log(`${logSymbols.info} 开始下载模板文件...`)
+
+    let speed = 0, percentage = 0
+
+    requestProgress(request(url), { throttle: 100 })
+        .on('progress', function (state) {
+            const frame = frames[i++ % frames.length]
+
+            speed = (state.speed/1024/1024).toFixed(2)
+            percentage = (state.percentage*100).toFixed(2)
+
+            const progressBar = (function() {
+                const width = 20
+                const completed = Math.ceil(width * state.percentage)
+                const loading = width - completed
+                return new Array(completed + 1).join('=') + new Array(loading + 1).join('-')
+            })()
+
+            logUpdate(`${chalk['cyan'](frame)} [${progressBar}] ${speed}MB/s ${percentage}%`)
+        })
+        .on('error', function() {
+
+        })
+        .on('end', function() {
+            i = 0
+            logUpdate(`${logSymbols['success']} [====================] ${speed}MB/s 100%`)
+            logUpdate.done()
+            unzipTemplate(release)
+        })
+        .pipe(fs.createWriteStream(release))
+}
+
+// 解压模板文件
+function unzipTemplate(file) {
+
+    console.log()
+
+    let counts = 0,
+        entriesCount = 0,
+        width = 0,
+        completed = 0,
+        loading = 0,
+        progressBar = ''
+
+    const zip = new StreamZip({
+        file: file,
+        storeEntries: true
+    })
+
+    zip.on('error', err => {
+        console.log(err)
+    })
+
+    zip.on('ready', () => {
+        console.log(`${logSymbols.info} 开始解压文件...`)
+
+        zip.extract(null, projectName, () => {
+            logUpdate(`${logSymbols['success']} [${progressBar}] ${counts}/${entriesCount}`)
+            logUpdate.done()
+            console.log()
+            console.log(`  All completed!Run:`)
+            console.log(`  ${chalk.gray(`cd ${projectName} && gulp`)}`)
+        })
+    })
+
+    zip.on('extract', () => {
+        counts += 1
+        const frame = frames[i++ % frames.length]
+
+        width = 20,
+            completed = parseInt(width * (counts / entriesCount)),
+            loading = width - completed,
+            progressBar = new Array(completed + 1).join('=') + new Array(loading + 1).join('-')
+
+        logUpdate(`${chalk['cyan'](frame)} [${progressBar}] ${counts}/${entriesCount}`)
+    })
+
+    zip.on('entry', (entry) => {
+        if (!entry.isDirectory) entriesCount++
+    })
+}
