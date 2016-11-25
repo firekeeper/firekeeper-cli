@@ -37,7 +37,7 @@ if (program.args.length < 2) {
 // 第二个参数为项目名称
 // 现在只有 simple 模式，所以默认为 simple
 let mode = 'simple'
-const projectName = program.args[1] || 'my-project'
+const projectName = program.args[1]
 
 // 输出空行保证命令行格式工整
 console.log()
@@ -45,7 +45,7 @@ console.log()
 // 检测项目目录
 exists(projectName, (result) => {
     // 项目已存在，输出信息
-    if (result) {
+    if (result && projectName != '.') {
         console.log(logSymbols['error'], chalk['red']('项目已存在，重新创建项目或手动清空目录'))
     }
     // 项目不存在
@@ -54,6 +54,10 @@ exists(projectName, (result) => {
         mkdir(projectName, (err) => {
             // 项目创建失败
             if (err) {
+                if (projectName === '.') {
+                    checkVerifyFile()
+                    return
+                }
                 console.log(logSymbols.error, chalk['red']('项目创建失败，详细信息：\n'))
                 console.log(err)
             }
@@ -61,73 +65,77 @@ exists(projectName, (result) => {
                 logUpdate(`${logSymbols.success} 项目目录创建成功`)
                 logUpdate.done()
                 // 验证本地校验文件
-                console.log()
-                logUpdate(`${logSymbols.info} 检查更新...`)
-                exists(settings[mode].verifyFile.local, (result) => {
-                    // 校验文件存在，验证线上版本
-                    if (result) {
-                        const local = require(settings[mode].verifyFile.local)
-                        request(`${settings.source[0]}${settings[mode].verifyFile.remote}?v=${Math.random()}`, (err, response, body) => {
-                            try {
-                                body = JSON.parse(body)
-                            }
-                            catch(err)  {
-                                logUpdate(`${logSymbols.error} 线上文件有误，请联系：x@kassading.com`)
-                                logUpdate.done()
-                                return
-                            }
-                            // 没有更新，检验模板文件是否存在
-                            if (local.version === body.version) {
-                                logUpdate(`${logSymbols.success} 模板文件没有更新`)
-                                logUpdate.done()
-                                existsTemplate()
-                            }
-                            // 有更新，下载新版校验文件
-                            else {
-                                logUpdate(`  本地版本：${local.version}\n  线上版本：${body.version}\n${logSymbols.info} 需要更新`)
-                                logUpdate.done()
-                                downloadVerifyFile()
-                            }
-                        })
-                    }
-                    // 校验文件不存在，检查 simple 目录
-                    else {
-                        logUpdate(`${logSymbols.info} 校验文件不存在`)
-                        logUpdate.done()
-                        exists(settings['simple'].package.path, (result) => {
-                            // simple 目录存在，下载校验文件
-                            if (result) {
-                                downloadVerifyFile()
-                            }
-                            // simple 目录不存在，检查 .firekeeper 目录
-                            else {
-                                exists(settings.package.path, (result) => {
-                                    // .firekeeper 目录已存在，创建 simple 目录
-                                    if (result) {
-                                        createSimpleDir()
-                                    }
-                                    // .firekeeper 目录不存在，创建 .firekeeper 目录
-                                    else {
-                                        mkdir(settings.package.path, (err) => {
-                                            // .firekeeper 目录创建失败，输出报错信息，终止程序
-                                            if (err) {
-                                                console.log(err)
-                                            }
-                                            // .firekeeper 目录创建成功，继续创建 simple 目录
-                                            else {
-                                                createSimpleDir()
-                                            }
-                                        })
-                                    }
-                                })
-                            }
-                        })
-                    }
-                })
+                checkVerifyFile()
             }
         })
     }
 })
+
+function checkVerifyFile() {
+    console.log()
+    logUpdate(`${logSymbols.info} 检查更新...`)
+    exists(settings[mode].verifyFile.local, (result) => {
+        // 校验文件存在，验证线上版本
+        if (result) {
+            const local = require(settings[mode].verifyFile.local)
+            request(`${settings.source[0]}${settings[mode].verifyFile.remote}?v=${Math.random()}`, (err, response, body) => {
+                try {
+                    body = JSON.parse(body)
+                }
+                catch(err)  {
+                    logUpdate(`${logSymbols.error} 线上文件有误，请联系：x@kassading.com`)
+                    logUpdate.done()
+                    return
+                }
+                // 没有更新，检验模板文件是否存在
+                if (local.version === body.version) {
+                    logUpdate(`${logSymbols.success} 模板文件没有更新`)
+                    logUpdate.done()
+                    existsTemplate()
+                }
+                // 有更新，下载新版校验文件
+                else {
+                    logUpdate(`  本地版本：${local.version}\n  线上版本：${body.version}\n${logSymbols.info} 需要更新`)
+                    logUpdate.done()
+                    downloadVerifyFile()
+                }
+            })
+        }
+        // 校验文件不存在，检查 simple 目录
+        else {
+            logUpdate(`${logSymbols.info} 校验文件不存在`)
+            logUpdate.done()
+            exists(settings['simple'].package.path, (result) => {
+                // simple 目录存在，下载校验文件
+                if (result) {
+                    downloadVerifyFile()
+                }
+                // simple 目录不存在，检查 .firekeeper 目录
+                else {
+                    exists(settings.package.path, (result) => {
+                        // .firekeeper 目录已存在，创建 simple 目录
+                        if (result) {
+                            createSimpleDir()
+                        }
+                        // .firekeeper 目录不存在，创建 .firekeeper 目录
+                        else {
+                            mkdir(settings.package.path, (err) => {
+                                // .firekeeper 目录创建失败，输出报错信息，终止程序
+                                if (err) {
+                                    console.log(err)
+                                }
+                                // .firekeeper 目录创建成功，继续创建 simple 目录
+                                else {
+                                    createSimpleDir()
+                                }
+                            })
+                        }
+                    })
+                }
+            })
+        }
+    })
+}
 
 function createSimpleDir() {
     mkdir(settings[mode].package.path, (err) => {
