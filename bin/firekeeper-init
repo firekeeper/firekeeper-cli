@@ -1,5 +1,6 @@
 const fs = require('fs')
 
+const reload = require('require-reload')(require)
 const program = require('commander')
 const chalk = require('chalk')
 const request = require('request')
@@ -182,6 +183,7 @@ function downloadVerifyFile() {
             logUpdate(`${logSymbols['success']} [====================] ${speed}MB/s 100%`)
             logUpdate.done()
             // 下载完成，检验模板文件
+            firekeeper = reload(settings[mode].verifyFile.local)
             existsTemplate()
         })
         .pipe(fs.createWriteStream(settings[mode].verifyFile.local))
