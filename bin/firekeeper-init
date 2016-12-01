@@ -271,7 +271,12 @@ function unzipTemplate(file) {
             logUpdate.done()
             console.log()
             console.log(`  All completed!Run:`)
-            console.log(`  ${chalk.gray(`cd ${projectName} && gulp`)}`)
+            if (projectName !== '.') {
+                console.log(`  ${chalk.gray(`cd ${projectName} && gulp`)}`)
+            }
+            else {
+                console.log(`  ${chalk.gray(`run gulp`)}`)
+            }
         })
     })
 

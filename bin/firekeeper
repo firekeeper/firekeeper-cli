@@ -8,25 +8,5 @@ program
     .version(require('../package').version, '-v, --version')
     .usage('<command>')
     .command('init <mode>', '初始化项目')
+    .command('extract', '提取 node_modules 目录')
     .parse(process.argv)
-
-// 校验版本
-// require('../lib/check-version')('simple')
-
-// 创建 firekeeper 目录
-// require('../lib/create-firekeeper')('simple')
-
-// 创建 simple 目录
-// require('../lib/create-simple')('simple')
-
-// 创建 project 目录
-// require('../lib/create-project')('./dist')
-
-// 下载校验文件
-// require('../lib/download-verify-file')('simple')
-
-// 下载包
-// require('../lib/download-package')('simple')
-
-// 解压包
-// require('../lib/unzip')('simple')
