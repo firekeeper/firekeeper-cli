@@ -1,6 +1,6 @@
 {
   "name": "firekeeper-cli",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "脚手架工具",
   "main": "index.js",
   "scripts": {
